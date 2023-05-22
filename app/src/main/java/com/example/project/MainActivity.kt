@@ -201,7 +201,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private fun postJsonData(url: String, jsonData: String) {
@@ -220,9 +219,15 @@ class MainActivity : AppCompatActivity() {
                 .post(body)
                 .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Unexpected code $response")
-                println(response.body?.string())
+            try {
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+                    println(response.body?.string())
+                }
+            } catch (e: IOException) {
+                // Handle the exception here
+                e.printStackTrace()
+                // You can display an error message to the user if desired
             }
         }
     }
