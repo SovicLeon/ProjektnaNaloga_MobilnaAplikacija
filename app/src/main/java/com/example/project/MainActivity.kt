@@ -2,6 +2,7 @@ package com.example.project
 
 import android.Manifest
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -12,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -34,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private var longitude: Double = 0.0
     private var latitude: Double = 0.0
 
+    private lateinit var locationTextView: TextView
+
     private val gravityV = FloatArray(3) { 0f }
     private var x: Float = 0f
     private var y: Float = 0f
@@ -53,6 +57,11 @@ class MainActivity : AppCompatActivity() {
             Log.d("MaxValues", "Max Acc X: ${maxAccValue[0]}, Y: ${maxAccValue[1]}, Z: ${maxAccValue[2]}")
             Log.d("MaxValues", "Max Gyro X: ${maxGyroValue[0]}, Y: ${maxGyroValue[1]}, Z: ${maxGyroValue[2]}")
             Log.d("Location", "Longitude: $longitude, Latitude: $latitude")
+
+            // Update the location TextView with the current latitude and longitude values
+            val locationText = "Location\nLatitude: $latitude\nLongitude: $longitude"
+
+            locationTextView.text = locationText
             val jsonData = """
                                 {
                                     "sessionID": "id",
@@ -67,7 +76,7 @@ class MainActivity : AppCompatActivity() {
                                     "latitude": $latitude
                                 }
                             """
-            postJsonData("http://localhost:3001/vehicleData/",jsonData)
+            postJsonData("http://192.168.0.120:3001/vehicleData/",jsonData)
             maxAccValue.fill(0f)
             maxGyroValue.fill(0f)
             handler.postDelayed(this, 1000)
@@ -84,7 +93,7 @@ class MainActivity : AppCompatActivity() {
                 val alpha = 0.8f
 
                 gravityV[0] = alpha * gravityV[0] + (1 - alpha) * event.values[0]
-                gravityV[1] = alpha * gravityV[1] + (1 - alpha)* event.values[1]
+                gravityV[1] = alpha * gravityV[1] + (1 - alpha) * event.values[1]
                 gravityV[2] = alpha * gravityV[2] + (1 - alpha) * event.values[2]
 
                 x = event.values[0] - gravityV[0]
@@ -95,6 +104,11 @@ class MainActivity : AppCompatActivity() {
                 for (i in accValues.indices) {
                     if (accValues[i] > maxAccValue[i]) maxAccValue[i] = accValues[i]
                 }
+
+                // Update the accelerometer TextView with the current sensor values
+                val accTextView = findViewById<TextView>(R.id.textViewAcc)
+                val accText = "Accelerometer\nX: ${maxAccValue[0]}\nY: ${maxAccValue[1]}\nZ: ${maxAccValue[2]}"
+                accTextView.text = accText
             }
         }
     }
@@ -110,6 +124,11 @@ class MainActivity : AppCompatActivity() {
                 for (i in gyroValues.indices) {
                     if (gyroValues[i] > maxGyroValue[i]) maxGyroValue[i] = gyroValues[i]
                 }
+
+                // Update the gyroscope TextView with the current sensor values
+                val gyroTextView = findViewById<TextView>(R.id.textViewGyro)
+                val gyroText = "Gyroscope\nX: ${maxGyroValue[0]}\nY: ${maxGyroValue[1]}\nZ: ${maxGyroValue[2]}"
+                gyroTextView.text = gyroText
             }
         }
     }
@@ -121,6 +140,8 @@ class MainActivity : AppCompatActivity() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
+
+        locationTextView = findViewById(R.id.textViewLocation)
 
         accelerometerSensor?.let {
             sensorManager.registerListener(accelerationListener, it, SensorManager.SENSOR_DELAY_GAME)
@@ -148,16 +169,9 @@ class MainActivity : AppCompatActivity() {
             fetchLocation()
         }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                // Got last known location. In some rare situations this can be null.
-                location?.let {
-                    latitude = it.latitude
-                    longitude = it.longitude
-                }
-            }
-
         handler.post(runnable)
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -201,6 +215,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     private fun postJsonData(url: String, jsonData: String) {
@@ -214,9 +229,11 @@ class MainActivity : AppCompatActivity() {
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val body = jsonData.toRequestBody(mediaType)
 
+            val sessionCookie: String? = retrieveSessionCookie()
             val request = Request.Builder()
                 .url(url)
                 .post(body)
+                .header("Cookie", sessionCookie ?: "") // Use an empty string if the sessionCookie is null
                 .build()
 
             try {
@@ -238,4 +255,8 @@ class MainActivity : AppCompatActivity() {
         return networkInfo?.isConnectedOrConnecting ?: false
     }
 
+    private fun retrieveSessionCookie(): String? {
+        val sharedPreferences: SharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
+        return sharedPreferences.getString("sessionCookie", null)
+    }
 }
