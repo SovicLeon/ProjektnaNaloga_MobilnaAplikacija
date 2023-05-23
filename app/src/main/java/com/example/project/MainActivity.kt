@@ -18,6 +18,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import kotlin.math.abs
 import okhttp3.MediaType.Companion.toMediaType
@@ -35,8 +38,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var longitude: Double = 0.0
     private var latitude: Double = 0.0
-
-    private lateinit var locationTextView: TextView
 
     private val gravityV = FloatArray(3) { 0f }
     private var x: Float = 0f
@@ -59,9 +60,20 @@ class MainActivity : AppCompatActivity() {
             Log.d("Location", "Longitude: $longitude, Latitude: $latitude")
 
             // Update the location TextView with the current latitude and longitude values
+            val locationTextView = findViewById<TextView>(R.id.textViewLocation)
             val locationText = "Location\nLatitude: $latitude\nLongitude: $longitude"
-
             locationTextView.text = locationText
+
+            // Update the accelerometer TextView with the current sensor values
+            val accTextView = findViewById<TextView>(R.id.textViewAcc)
+            val accText = "Accelerometer\nX: ${maxAccValue[0]}\nY: ${maxAccValue[1]}\nZ: ${maxAccValue[2]}"
+            accTextView.text = accText
+
+            // Update the gyroscope TextView with the current sensor values
+            val gyroTextView = findViewById<TextView>(R.id.textViewGyro)
+            val gyroText = "Gyroscope\nX: ${maxGyroValue[0]}\nY: ${maxGyroValue[1]}\nZ: ${maxGyroValue[2]}"
+            gyroTextView.text = gyroText
+
             val jsonData = """
                                 {
                                     "sessionID": "id",
@@ -76,7 +88,9 @@ class MainActivity : AppCompatActivity() {
                                     "latitude": $latitude
                                 }
                             """
-            postJsonData("http://192.168.0.120:3001/vehicleData/",jsonData)
+            if (latitude  != 0.0 && longitude != 0.0) {
+                postJsonData("http://192.168.0.120:3001/vehicleData/",jsonData)
+            }
             maxAccValue.fill(0f)
             maxGyroValue.fill(0f)
             handler.postDelayed(this, 1000)
@@ -104,11 +118,6 @@ class MainActivity : AppCompatActivity() {
                 for (i in accValues.indices) {
                     if (accValues[i] > maxAccValue[i]) maxAccValue[i] = accValues[i]
                 }
-
-                // Update the accelerometer TextView with the current sensor values
-                val accTextView = findViewById<TextView>(R.id.textViewAcc)
-                val accText = "Accelerometer\nX: ${maxAccValue[0]}\nY: ${maxAccValue[1]}\nZ: ${maxAccValue[2]}"
-                accTextView.text = accText
             }
         }
     }
@@ -124,11 +133,6 @@ class MainActivity : AppCompatActivity() {
                 for (i in gyroValues.indices) {
                     if (gyroValues[i] > maxGyroValue[i]) maxGyroValue[i] = gyroValues[i]
                 }
-
-                // Update the gyroscope TextView with the current sensor values
-                val gyroTextView = findViewById<TextView>(R.id.textViewGyro)
-                val gyroText = "Gyroscope\nX: ${maxGyroValue[0]}\nY: ${maxGyroValue[1]}\nZ: ${maxGyroValue[2]}"
-                gyroTextView.text = gyroText
             }
         }
     }
@@ -140,8 +144,6 @@ class MainActivity : AppCompatActivity() {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-
-        locationTextView = findViewById(R.id.textViewLocation)
 
         accelerometerSensor?.let {
             sensorManager.registerListener(accelerationListener, it, SensorManager.SENSOR_DELAY_GAME)
@@ -166,7 +168,7 @@ class MainActivity : AppCompatActivity() {
                 LOCATION_PERMISSION_REQUEST_CODE
             )
         } else {
-            fetchLocation()
+            requestLocationUpdates()
         }
 
         handler.post(runnable)
@@ -188,7 +190,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                 // Permission was granted, continue with fetching location
-                fetchLocation()
+                requestLocationUpdates()
             } else {
                 // Permission was denied, handle appropriately
                 Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
@@ -196,7 +198,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchLocation() {
+    private fun requestLocationUpdates() {
+        val locationRequest = LocationRequest.create().apply {
+            interval = 1000 // Update interval in milliseconds
+            fastestInterval = 500 // Fastest update interval in milliseconds
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult?) {
+                locationResult?.lastLocation?.let { location ->
+                    latitude = location.latitude
+                    longitude = location.longitude
+                }
+            }
+        }
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -205,13 +222,20 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.ACCESS_COARSE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                // Got last known location. In some rare situations this can be null.
-                location?.let {
-                    latitude = it.latitude
-                    longitude = it.longitude
-                }
-            }
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
         }
     }
 
