@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -137,9 +138,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var startTime: Long = 0
+    private var endTime: Long = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val startButton = findViewById<Button>(R.id.startButton)
+        val stopButton = findViewById<Button>(R.id.stopButton)
+
+        startButton.setOnClickListener {
+            startTime = System.currentTimeMillis()
+            handler.post(runnable)
+        }
+
+        stopButton.setOnClickListener {
+            endTime = System.currentTimeMillis()
+            handler.removeCallbacks(runnable)
+            processVehicleData()
+        }
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -170,8 +188,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             requestLocationUpdates()
         }
-
-        handler.post(runnable)
     }
 
 
@@ -263,14 +279,41 @@ class MainActivity : AppCompatActivity() {
             try {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("Unexpected code $response")
-                    println(response.body?.string())
+                    val responseBody = response.body?.string()
+                    println(responseBody)
+
+                    runOnUiThread {
+                        val debugTextView = findViewById<TextView>(R.id.debugTextView)
+                        debugTextView.text = "Data sending successfully!"
+                        //debugTextView.text = "Data sent successfully!\nResponse: $responseBody"
+                    }
                 }
             } catch (e: IOException) {
                 // Handle the exception here
                 e.printStackTrace()
-                // You can display an error message to the user if desired
+                runOnUiThread {
+                    val debugTextView = findViewById<TextView>(R.id.debugTextView)
+                    debugTextView.text = e.message
+                }
+            } finally {
+                if (url == "http://192.168.0.120:3001/vehicleData/process") {
+                    runOnUiThread {
+                        val debugTextView = findViewById<TextView>(R.id.debugTextView)
+                        debugTextView.text = "Not sending data."
+                    }
+                }
             }
         }
+    }
+
+    private fun processVehicleData() {
+        val jsonData = """
+        {
+            "start": $startTime,
+            "end": $endTime
+        }
+        """
+        postJsonData("http://192.168.0.120:3001/vehicleData/process", jsonData)
     }
 
     private fun isNetworkAvailable(): Boolean {
