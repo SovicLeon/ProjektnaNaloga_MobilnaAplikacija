@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             """
             if (latitude  != 0.0 && longitude != 0.0) {
-                postJsonData("http://192.168.0.120:3001/vehicleData/",jsonData)
+                postJsonData("http://192.168.1.6:3001/vehicleData/",jsonData)
             }
             maxAccValue.fill(0f)
             maxGyroValue.fill(0f)

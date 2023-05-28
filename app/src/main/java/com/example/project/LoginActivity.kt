@@ -41,7 +41,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun performLogin(username: String, password: String) {
-        val url = "http://192.168.0.120:3001/users/login" // Replace with your actual login API URL
+        val url = "http://192.168.1.6:3001/users/login" // Replace with your actual login API URL
 
         val jsonData = """
         {
@@ -65,7 +65,7 @@ class LoginActivity : AppCompatActivity() {
                 val responseBody = response.body?.string()
                 if (response.isSuccessful && responseBody != null) {
                     // Successful login, navigate to the main activity
-                    val intent = Intent(this@LoginActivity, MainActivity::class.java)
+                    val intent = Intent(this@LoginActivity, FaceActivity::class.java)
                     startActivity(intent)
                     finish()
                     // Save the session cookie if available
