@@ -99,7 +99,7 @@ class FaceActivity : AppCompatActivity() {
             .build()
 
         val request = Request.Builder()
-            .url("http://192.168.1.6:3001/photos/")
+            .url("http://86.58.50.249:3001/photos/")
             .post(requestBody)
             .header("Cookie", sessionCookie ?: "")
             .build()

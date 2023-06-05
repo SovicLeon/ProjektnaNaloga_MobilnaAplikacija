@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             """
             if (latitude  != 0.0 && longitude != 0.0) {
-                postJsonData("http://192.168.1.6:3001/vehicleData/",jsonData)
+                postJsonData("http://86.58.50.249:3001/vehicleData/",jsonData)
             }
             maxAccValue.fill(0f)
             maxGyroValue.fill(0f)
@@ -296,7 +296,7 @@ class MainActivity : AppCompatActivity() {
                     debugTextView.text = e.message
                 }
             } finally {
-                if (url == "http://192.168.0.120:3001/vehicleData/process") {
+                if (url == "http://86.58.50.249:3001/vehicleData/process") {
                     runOnUiThread {
                         val debugTextView = findViewById<TextView>(R.id.debugTextView)
                         debugTextView.text = "Not sending data."
@@ -313,7 +313,7 @@ class MainActivity : AppCompatActivity() {
             "end": $endTime
         }
         """
-        postJsonData("http://192.168.0.120:3001/vehicleData/process", jsonData)
+        postJsonData("http://86.58.50.249:3001/vehicleData/process", jsonData)
     }
 
     private fun isNetworkAvailable(): Boolean {

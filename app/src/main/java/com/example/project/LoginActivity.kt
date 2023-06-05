@@ -41,7 +41,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun performLogin(username: String, password: String) {
-        val url = "http://192.168.1.6:3001/users/login" // Replace with your actual login API URL
+        val url = "http://86.58.50.249:3001/users/login" // Replace with your actual login API URL
 
         val jsonData = """
         {
