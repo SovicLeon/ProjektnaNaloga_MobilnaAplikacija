@@ -21,6 +21,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import android.util.Log
+import org.json.JSONObject
 
 class FaceActivity : AppCompatActivity() {
 
@@ -116,9 +117,27 @@ class FaceActivity : AppCompatActivity() {
                 if (response.isSuccessful) {
                     // Photo upload successful
                     // Handle the response here
+                    val responseBody = response.body?.string()
+                    val jsonObject = JSONObject(responseBody)
+                    val testPassed = jsonObject.optBoolean("testPassed")
+
+                    if (testPassed) {
+                        val intent = Intent(this@FaceActivity, MainActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        // Test failed, redirect to login activity
+                        val intent = Intent(this@FaceActivity, LoginActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    }
                 } else {
                     // Photo upload failed
                     // Handle the response here
+                    // Test failed, redirect to login activity
+                    val intent = Intent(this@FaceActivity, LoginActivity::class.java)
+                    startActivity(intent)
+                    finish()
                 }
             }
         })
@@ -134,9 +153,6 @@ class FaceActivity : AppCompatActivity() {
                 uploadPhoto(it)
             }
         }
-        val intent = Intent(this@FaceActivity, MainActivity::class.java)
-        startActivity(intent)
-        finish()
     }
 
     private fun retrieveSessionCookie(): String? {
