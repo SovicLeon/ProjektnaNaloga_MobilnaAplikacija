@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -41,7 +42,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun performLogin(username: String, password: String) {
-        val url = "http://86.58.50.249:3001/users/login" // Replace with your actual login API URL
+        val url = "http://192.168.0.120:3001/users/login" // Replace with your actual login API URL
 
         val jsonData = """
         {
@@ -70,6 +71,7 @@ class LoginActivity : AppCompatActivity() {
                     finish()
                     // Save the session cookie if available
                     val cookies = response.headers.values("Set-Cookie")
+                    Log.d("Cookie", cookies.toString())
                     if (cookies.isNotEmpty()) {
                         val sessionCookie = cookies[0]
 
